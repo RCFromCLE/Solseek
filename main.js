@@ -44,6 +44,12 @@ function createWindow() {
 app.whenReady().then(createWindow);
 
 ipcMain.handle('save-account', async (event, accountData) => {
+    if (!accountData || !accountData.address){
+        return {
+            status: 'error',
+            message: 'Account cannot be added without a valid address.'
+        };
+    }
     let config = loadConfig();
     const index = findAccountIndex(config.accounts, accountData.address);
     if (index === -1) {
