@@ -47,7 +47,7 @@ ipcMain.handle('save-account', async (event, accountData) => {
     if (!accountData || !accountData.address){
         return {
             status: 'error',
-            message: 'Account cannot be added without a valid address.'
+            message: 'Sol Address cannot be empty.'
         };
     }
     let config = loadConfig();
