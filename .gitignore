@@ -128,3 +128,7 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# make sure you don't commit your config.json, this contains your private keys!
+**/config.json
+
