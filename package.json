@@ -1,0 +1,14 @@
+{
+  "name": "my-trading-bot",
+  "version": "1.0.0",
+  "description": "Trading bot with Electron GUI",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron main.js"
+  },
+  "dependencies": {
+    "@solana/web3.js": "^1.91.8",
+    "cross-fetch": "^4.0.0",
+    "electron": "^30.0.2"
+  }
+}

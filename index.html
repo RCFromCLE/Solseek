@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>RC's Solana Trading Bot</title>
+    <style>
+        body {
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        h1,
+        h2,
+        p,
+        select,
+        input,
+        button {
+            color: #bb86fc;
+            margin: 10px 0;
+        }
+
+        .section {
+            background-color: #252525;
+            padding: 20px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 600px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        input,
+        select,
+        button {
+            padding: 8px;
+            width: 100%;
+            background-color: #2b2b2b;
+            border: none;
+            border-radius: 4px;
+        }
+
+        button {
+            background-color: #3700b3;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #6200ea;
+        }
+
+        #priceTicker {
+            font-size: 24px;
+            font-weight: bold;
+            position: fixed;
+            top: 10px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #feedbackMessage {
+            color: #ffcc00;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>RC's Solana Trading Bot</h1>
+
+    <div id="priceTicker"><span id="currentPrice"></div>
+
+    <div class="section" id="accountSelection">
+        <h2>Wallet Management</h2>
+        <select id="accountList" onchange="updateAccountInfo()">
+            <option value="addNew">+ Add New Account</option>
+        </select>
+        <button onclick="deleteSelectedAccount()" id="deleteAccountBtn"
+            style="background-color: #d9534f; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; margin-top: 10px;">
+            Delete Wallet Info
+        </button>
+        <div id="feedbackMessage"></div>
+    </div>
+
+    <div class="section hidden" id="addAccountForm">
+        <h2>Add New Account</h2>
+        <input type="text" id="accountName" placeholder="Enter friendly name">
+        <input type="text" id="accountAddress" placeholder="Enter SOL address">
+        <input type="password" id="accountKey" placeholder="Enter private key">
+        <select id="networkType">
+            <option value="false">Development</option>
+            <option value="true">Production</option>
+        </select>
+        <button onclick="saveNewAccount()">Save Account</button>
+    </div>
+
+    <div class="section" id="walletInfo">
+        <h2>Wallet Information</h2>
+        <button onclick="getBalance()">Get Balance</button>
+        <p id="balanceDisplay">Balance: -- SOL</p>
+    </div>
+
+    <script src="preload.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            loadAccounts(); // Consolidate account loading into a single function call
+            updatePrice();
+            setInterval(updatePrice, 1000); // Update every 1 second
+        });
+
+        function loadAccounts() {
+            accountList.innerHTML = '<option value="addNew">+ Add New Account</option>'; // Reset the list
+            window.api.loadAccounts().then(accounts => {
+                accounts.forEach(account => {
+                    const option = document.createElement('option');
+                    option.textContent = account.name + (account.isProduction ? ' (Prod)' : ' (Dev)');
+                    option.value = account.address;
+                    option.dataset.isProduction = account.isProduction;
+                    accountList.appendChild(option);
+                });
+
+                // Ensures the UI updates are handled after all accounts are loaded
+                updateAccountInfo();
+
+            }).catch(err => {
+                console.error('Failed to load accounts:', err);
+            });
+        }
+        function updatePrice() {
+            fetch('https://price.jup.ag/v4/price?ids=SOL')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('currentPrice').textContent = data.data.SOL.price.toFixed(2) + ' USD';
+                })
+                .catch(err => console.error('Error fetching SOL price:', err));
+        }
+
+        function updateAccountInfo() {
+            const accountList = document.getElementById('accountList');
+            const selectedOption = accountList.options[accountList.selectedIndex];
+            const isDevAccount = selectedOption.dataset.isProduction === 'false';
+
+            const addAccountForm = document.getElementById('addAccountForm');
+            const faucetSection = document.getElementById('faucetSection');
+            const walletInfo = document.getElementById('walletInfo');
+            const deleteBtn = document.getElementById('deleteAccountBtn');
+
+            if (selectedOption.value === 'addNew') {
+                addAccountForm.classList.remove('hidden');
+                faucetSection.classList.add('hidden');
+                walletInfo.classList.add('hidden');
+                deleteBtn.style.display = 'none';
+            } else if (selectedOption.value) {
+                addAccountForm.classList.add('hidden');
+                walletInfo.classList.remove('hidden');
+                deleteBtn.style.display = 'block';
+
+                if (isDevAccount) {
+                    faucetSection.classList.remove('hidden');
+                } else {
+                    faucetSection.classList.add('hidden');
+                }
+            }
+        }
+
+        function saveNewAccount() {
+            const name = document.getElementById('accountName').value;
+            const address = document.getElementById('accountAddress').value;
+            const key = document.getElementById('accountKey').value;
+            const isProduction = document.getElementById('networkType').value === 'true';
+            window.api.saveAccount({ name, address, key, isProduction }).then(response => {
+                document.getElementById('feedbackMessage').innerText = response.message;
+                // Refresh the account list after saving
+                window.api.loadAccounts().then(accounts => {
+                    const accountList = document.getElementById('accountList');
+                    accountList.innerHTML = '<option value="">Select a saved account</option><option value="addNew">+ Add New Account</option>';
+                    accounts.forEach(account => {
+                        const option = document.createElement('option');
+                        option.textContent = account.name + (account.isProduction ? ' (Prod)' : ' (Dev)');
+                        option.value = account.address;
+                        option.dataset.isProduction = account.isProduction;
+                        accountList.appendChild(option);
+                    });
+                });
+            });
+        }
+
+        function deleteSelectedAccount() {
+            const accountList = document.getElementById('accountList');
+            const selectedAccount = accountList.value;
+            if (selectedAccount && selectedAccount !== 'addNew') {
+                if (confirm('Are you sure you want to delete this account?')) {
+                    window.api.deleteAccount(selectedAccount)
+                        .then(response => {
+                            document.getElementById('feedbackMessage').textContent = response.message;
+                            if (response.status === 'success') {
+                                // Remove the option from the select dropdown
+                                accountList.remove(accountList.selectedIndex);
+                                updateAccountInfo();  // Refresh the UI
+                            }
+                        })
+                        .catch(err => {
+                            console.error('Error deleting account:', err);
+                            document.getElementById('feedbackMessage').textContent = 'Failed to delete account';
+                        });
+                }
+            } else {
+                alert('Please select a valid account to delete.');
+            }
+        }
+        function getBalance() {
+            const selectedAccount = document.getElementById('accountList').selectedOptions[0];
+            if (selectedAccount && selectedAccount.value) {
+                const isProduction = selectedAccount.dataset.isProduction === 'true';
+                window.api.getBalance({ isProduction, address: selectedAccount.value })
+                    .then(balance => {
+                        document.getElementById('balanceDisplay').textContent = 'Balance: ' + balance.balance + ' SOL';
+                    })
+                    .catch(err => {
+                        console.error('Error fetching balance:', err);
+                        document.getElementById('balanceDisplay').textContent = 'Failed to fetch balance';
+                    });
+            } else {
+                alert('Select a valid account first.');
+            }
+        }
+    </script>
+
+    <script>
+
+        function selectAccount() {
+            const selected = document.getElementById('accountList').value;
+            const isProd = document.querySelector('#accountList option:checked').dataset.isProduction === 'true';
+            const faucetButton = document.getElementById('faucetButton');
+            faucetButton.style.display = isProd ? 'none' : 'block'; // Show faucet button only for dev accounts
+        }
+
+        function requestFaucet() {
+            const selectedAccount = document.getElementById('accountList').value;
+            if (selectedAccount) {
+                window.api.requestDevSol(selectedAccount).then(response => {
+                    alert(response.message); // Provide feedback based on the response
+                }).catch(error => {
+                    console.error('Error requesting SOL from faucet:', error);
+                    alert('Failed to request SOL: ' + error.message);
+                });
+            } else {
+                alert('No account selected or invalid account.');
+            }
+        }
+    </script>
+    <div id="faucetSection" class="section hidden">
+        <h2>Devnet Faucet</h2>
+        <p>To manually airdrop SOL for development purposes:</p>
+        <ul>
+            <li>Go to <a href="https://faucet.solana.com/" target="_blank">Solana Faucet</a></li>
+            <li>Switch to Devnet</li>
+            <li>Select "5 SOL"</li>
+            <li>Input your wallet address</li>
+        </ul>
+        <p>This process allows you to airdrop about 40-100 SOL per hour manually. Happy clicking!</p>
+        <button onclick="requestFaucet()">Request SOL</button>
+    </div>
+
+    <div class="tradingview-widget-container">
+        <div id="tradingview_2fc76"></div>
+        <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+        <script type="text/javascript">
+            new TradingView.widget(
+                {
+                    "width": 1200,
+                    "height": 800,
+                    "symbol": "PYTH:SOLUSD",
+                    "interval": "1",  // 1-minute chart
+                    "timezone": "Etc/UTC",
+                    "theme": "dark",  // Make sure the theme is set to 'dark'
+                    "style": "1",
+                    "locale": "en",
+                    "toolbar_bg": "#252525",  // Toolbar background to match section background
+                    "enable_publishing": false,
+                    "allow_symbol_change": true,
+                    "studies": [
+                        "RSI@tv-basicstudies"  // Adds RSI indicator
+                    ],
+                    "container_id": "tradingview_2fc76",
+                    "overrides": {
+                        // "paneProperties.background": "#1e1e1e",  // Background color of the chart
+                        // "paneProperties.vertGridProperties.color": "#454545",  // Vertical grid lines
+                        // "paneProperties.horzGridProperties.color": "#454545",  // Horizontal grid lines
+                        // "scalesProperties.textColor": "#e0e0e0",  // Scale text color
+                        // "mainSeriesProperties.candleStyle.upColor": "#6200ea",  // Candle up color
+                        // "mainSeriesProperties.candleStyle.downColor": "#d9534f",  // Candle down color
+                        // "mainSeriesProperties.candleStyle.borderUpColor": "#6200ea",  // Candle up border color
+                        // "mainSeriesProperties.candleStyle.borderDownColor": "#d9534f",  // Candle down border color
+                        // "mainSeriesProperties.candleStyle.wickUpColor": "#6200ea",  // Wick up color
+                        // "mainSeriesProperties.candleStyle.wickDownColor": "#d9534f"  // Wick down color
+                    }
+                }
+            );
+        </script>
+    </div>
+    </div>
+
+</body>
+
+</html>
