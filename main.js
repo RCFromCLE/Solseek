@@ -43,20 +43,30 @@ function createWindow() {
 
 app.whenReady().then(createWindow);
 
+const SOL_ADDRESS_REGEX = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+
 ipcMain.handle('save-account', async (event, accountData) => {
-    if (!accountData || !accountData.address){
+    if (!accountData || !accountData.address) {
         return {
             status: 'error',
-            message: 'Sol Address cannot be empty.'
+            message: 'Solana address cannot be empty.'
         };
     }
+
+    if (!SOL_ADDRESS_REGEX.test(accountData.address)) {
+        return {
+            status: 'error',
+            message: 'Invalid Solana address provided.'
+        };
+    }
+
     let config = loadConfig();
     const index = findAccountIndex(config.accounts, accountData.address);
     if (index === -1) {
         config.accounts.push(accountData);
         saveConfig(config);
         event.sender.send('account-saved', 'Account saved successfully');
-        return { status: 'success', message: 'Account saved successfully' };
+        return { status: 'success', message: 'Account added successfully' };
     } else {
         return { status: 'error', message: 'Account already exists' };
     }

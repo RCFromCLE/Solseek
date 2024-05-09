@@ -80,12 +80,13 @@
 <body>
     <h1>RC's Solana Trading Bot</h1>
 
-    <div id="priceTicker"><span id="currentPrice"></div>
+    <div id="priceTicker"><span id="currentPrice"></span></div>
 
     <div class="section" id="accountSelection">
         <h2>Wallet Management</h2>
         <select id="accountList" onchange="updateAccountInfo()">
-            <option value="addNew">+ Add New Account</option>
+            <option value="">Select an Account</option>
+            <!-- Additional options added dynamically -->
         </select>
         <button onclick="deleteSelectedAccount()" id="deleteAccountBtn"
             style="background-color: #d9534f; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; margin-top: 10px;">
@@ -110,9 +111,13 @@
         <h2>Wallet Information</h2>
         <button onclick="getBalance()">Get Balance</button>
         <p id="balanceDisplay">Balance: -- SOL</p>
+        <div>
+            <p id="addressDisplay">Address: None</p>
+        </div>
     </div>
+</body>
 
-    <script>
+<script>
         document.addEventListener('DOMContentLoaded', function () {
             loadAccounts(); // Consolidate account loading into a single function call
             updatePrice();
@@ -150,13 +155,20 @@
             const accountList = document.getElementById('accountList');
             const selectedOption = accountList.options[accountList.selectedIndex];
             const isDevAccount = selectedOption.dataset.isProduction === 'false';
-
+            const selectedAddress = accountList.value;
             const addAccountForm = document.getElementById('addAccountForm');
             const faucetSection = document.getElementById('faucetSection');
             const walletInfo = document.getElementById('walletInfo');
             const deleteBtn = document.getElementById('deleteAccountBtn');
+            
+            if (selectedAddress) {
+                addressDisplay.innerText = 'Address: ' + selectedAddress;
+            }else {
+                addressDisplay.innerText = 'Address: None';
+                }
+            
 
-            if (selectedOption.value === 'addNew') {
+            if (selectedOption.value === 'addNew' || selectedOption.value === '' || selectedOption.value === null) {
                 addAccountForm.classList.remove('hidden');
                 faucetSection.classList.add('hidden');
                 walletInfo.classList.add('hidden');
