@@ -1,6 +1,6 @@
-# Solseeker
+# Solseek
 
-Welcome to Solseeker Solana Trading Bot! This project allows you to manage Solana wallets connected to it, view current SOL prices, and interact with the Solana blockchain using a user-friendly desktop application built with Electron.
+Welcome to Solseek Solana Trading Bot! This project allows you to manage Solana wallets connected to it, view current SOL prices, and interact with the Solana blockchain using a user-friendly desktop application built with Electron.
 
 ## Features
 
