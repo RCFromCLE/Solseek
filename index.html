@@ -100,10 +100,8 @@
             <option value="">Select an Account</option>
             <!-- Additional options added dynamically -->
         </select>
-        <button onclick="deleteSelectedAccount()" id="deleteAccountBtn"
-            style="background-color: #d9534f; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; margin-top: 10px;">
-            Delete Wallet Info
-        </button>
+        <button onclick="deleteSelectedAccount()" id="deleteAccountBtn">Delete Wallet Info</button>
+        <p id="startMessage" class="hidden">To get started, you need to add a Solana wallet.</p>
         <div id="feedbackMessage"></div>
     </div>
 
@@ -133,11 +131,11 @@
     document.addEventListener('DOMContentLoaded', function () {
         loadAccounts(); // Consolidate account loading into a single function call
         updatePrice();
-        setInterval(updatePrice, 1000); // Update every 1 second
+        setInterval(updatePrice, 1050); // Update every 1 second    
     });
 
     function loadAccounts() {
-        accountList.innerHTML = '<option value="addNew">+ Add New Account</option>'; // Reset the list
+        accountList.innerHTML = '<option value="">Select an Account</option><option value="addNew">+ Add New Account</option>'; // Include 'Add New' option by default
         window.api.loadAccounts().then(accounts => {
             accounts.forEach(account => {
                 const option = document.createElement('option');
@@ -146,14 +144,12 @@
                 option.dataset.isProduction = account.isProduction;
                 accountList.appendChild(option);
             });
-
-            // Ensures the UI updates are handled after all accounts are loaded
-            updateAccountInfo();
-
+            updateAccountInfo(); // Ensures the UI updates are handled after all accounts are loaded
         }).catch(err => {
             console.error('Failed to load accounts:', err);
         });
     }
+
     function updatePrice() {
         fetch('https://price.jup.ag/v4/price?ids=SOL')
             .then(response => response.json())
@@ -167,40 +163,35 @@
     const accountList = document.getElementById('accountList');
     const selectedOption = accountList.options[accountList.selectedIndex];
     const selectedAddress = accountList.value;
+    const startMessage = document.getElementById('startMessage');
 
-    // Elements to be controlled based on account selection
     const walletInfo = document.getElementById('walletInfo');
-    const botManagement = document.getElementById('botManagement');
     const deleteBtn = document.getElementById('deleteAccountBtn');
-    const faucetSection = document.getElementById('faucetSection');
     const addAccountForm = document.getElementById('addAccountForm');
 
-    // Hide elements that should not be visible when no account is selected
-    walletInfo.classList.add('hidden');
-    botManagement.classList.add('hidden');
-    deleteBtn.style.display = 'none';
-    faucetSection.classList.add('hidden');
-    addAccountForm.classList.add('hidden');
-
-    // Control visibility based on whether an account is selected
-    if (selectedAddress && selectedAddress !== 'addNew') {
-        // Account is selected, not the 'Add New' option
+    if (selectedAddress === 'addNew') {
+        // Show add new account form and hide wallet info, delete button, and start message
+        addAccountForm.classList.remove('hidden');
+        walletInfo.classList.add('hidden');
+        deleteBtn.style.display = 'none';
+        startMessage.classList.add('hidden');
+    } else if (selectedAddress) {
+        // Account selected, show wallet info, delete button and hide start message and add account form
         walletInfo.classList.remove('hidden');
-        botManagement.classList.remove('hidden');
         deleteBtn.style.display = 'block';
+        startMessage.classList.add('hidden');
+        addAccountForm.classList.add('hidden');
         document.getElementById('addressDisplay').innerText = 'Address: ' + selectedAddress;
-
-        if (selectedOption.dataset.isProduction === 'false') {
-            faucetSection.classList.remove('hidden');
-        }
     } else {
-        // No account is selected or 'Add New' is selected
-        document.getElementById('addressDisplay').innerText = 'Address: None';
-        document.getElementById('feedbackMessage').innerText = 'To get started, you need to add a Solana wallet.';
+        // No account selected, show start message and hide wallet info, delete button, and add account form
+        startMessage.classList.remove('hidden');
+        walletInfo.classList.add('hidden');
+        deleteBtn.style.display = 'none';
+        addAccountForm.classList.add('hidden');
     }
 }
 
-document.getElementById('accountList').addEventListener('change', updateAccountInfo);
+    document.getElementById('accountList').addEventListener('change', updateAccountInfo);
 
     function saveNewAccount() {
         const name = document.getElementById('accountName').value;
@@ -385,7 +376,7 @@ document.getElementById('accountList').addEventListener('change', updateAccountI
         <button onclick="saveBotConfig()">Save Bot Configuration</button>
     </div>
     <div id="botFeedbackMessage"></div>
-    
+
     <!-- Testing Options, initially hidden -->
     <div id="testingOptions" class="hidden">
         <h2>Trading Bot Control</h2>
@@ -404,10 +395,10 @@ document.getElementById('accountList').addEventListener('change', updateAccountI
 
         // Toggle configuration visibility
         botConfig.classList.toggle('hidden', selectedBot !== 'addNew');
-        
+
         // Toggle testing options visibility
         testingOptions.classList.toggle('hidden', !selectedBot || selectedBot === 'addNew');
-        
+
         // Clear results when no valid bot is selected
         if (!selectedBot || selectedBot === 'addNew') {
             document.getElementById('botTestResult').textContent = '';
@@ -431,7 +422,7 @@ document.getElementById('accountList').addEventListener('change', updateAccountI
     function saveBotConfig() {
         const name = document.getElementById('botName').value;
         const strategy = document.getElementById('botStrategy').value;
-        
+
         // Assume an API call to save the bot configuration
         window.api.saveBot({ name, strategy }).then(response => {
             document.getElementById('botFeedbackMessage').textContent = 'Bot saved successfully!';
