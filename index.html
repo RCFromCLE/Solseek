@@ -75,6 +75,10 @@
             color: #ffcc00;
         }
 
+        #startMessage {
+            color: #ffcc00;
+        }
+
         .tradingview-widget-container {
             margin-bottom: 30px;
             /* Adds space below the trading chart */
@@ -160,36 +164,36 @@
     }
 
     function updateAccountInfo() {
-    const accountList = document.getElementById('accountList');
-    const selectedOption = accountList.options[accountList.selectedIndex];
-    const selectedAddress = accountList.value;
-    const startMessage = document.getElementById('startMessage');
+        const accountList = document.getElementById('accountList');
+        const selectedOption = accountList.options[accountList.selectedIndex];
+        const selectedAddress = accountList.value;
+        const startMessage = document.getElementById('startMessage');
 
-    const walletInfo = document.getElementById('walletInfo');
-    const deleteBtn = document.getElementById('deleteAccountBtn');
-    const addAccountForm = document.getElementById('addAccountForm');
+        const walletInfo = document.getElementById('walletInfo');
+        const deleteBtn = document.getElementById('deleteAccountBtn');
+        const addAccountForm = document.getElementById('addAccountForm');
 
-    if (selectedAddress === 'addNew') {
-        // Show add new account form and hide wallet info, delete button, and start message
-        addAccountForm.classList.remove('hidden');
-        walletInfo.classList.add('hidden');
-        deleteBtn.style.display = 'none';
-        startMessage.classList.add('hidden');
-    } else if (selectedAddress) {
-        // Account selected, show wallet info, delete button and hide start message and add account form
-        walletInfo.classList.remove('hidden');
-        deleteBtn.style.display = 'block';
-        startMessage.classList.add('hidden');
-        addAccountForm.classList.add('hidden');
-        document.getElementById('addressDisplay').innerText = 'Address: ' + selectedAddress;
-    } else {
-        // No account selected, show start message and hide wallet info, delete button, and add account form
-        startMessage.classList.remove('hidden');
-        walletInfo.classList.add('hidden');
-        deleteBtn.style.display = 'none';
-        addAccountForm.classList.add('hidden');
+        if (selectedAddress === 'addNew') {
+            // Show add new account form and hide wallet info, delete button, and start message
+            addAccountForm.classList.remove('hidden');
+            walletInfo.classList.add('hidden');
+            deleteBtn.style.display = 'none';
+            startMessage.classList.add('hidden');
+        } else if (selectedAddress) {
+            // Account selected, show wallet info, delete button and hide start message and add account form
+            walletInfo.classList.remove('hidden');
+            deleteBtn.style.display = 'block';
+            startMessage.classList.add('hidden');
+            addAccountForm.classList.add('hidden');
+            document.getElementById('addressDisplay').innerText = 'Address: ' + selectedAddress;
+        } else {
+            // No account selected, show start message and hide wallet info, delete button, and add account form
+            startMessage.classList.remove('hidden');
+            walletInfo.classList.add('hidden');
+            deleteBtn.style.display = 'none';
+            addAccountForm.classList.add('hidden');
+        }
     }
-}
 
     document.getElementById('accountList').addEventListener('change', updateAccountInfo);
 
