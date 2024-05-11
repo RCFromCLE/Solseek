@@ -132,3 +132,5 @@ dist
 # make sure you don't commit your config.json, this contains your private keys!
 **/config.json
 
+**/bots.json
+
