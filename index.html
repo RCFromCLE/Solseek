@@ -74,6 +74,9 @@
         #feedbackMessage {
             color: #ffcc00;
         }
+        #botFeedbackMessage {
+            color: #ffcc00;
+        }
 
         #startMessage {
             color: #ffcc00;
@@ -259,10 +262,6 @@
         }
     }
 
-    function loadBots() {
-        // Placeholder: Fetch bot configurations from backend
-    }
-
     function updateBotSelection() {
         const botList = document.getElementById('botList');
         const selectedBot = botList.value;
@@ -366,6 +365,39 @@
     </script>
 </div>
 </div>
+<div class="section" id="marketAnalysis">
+    <h2>Market Analysis</h2>
+    <button onclick="fetchMarketData()">Fetch Market Data</button>
+    <p id="marketPrice">Current Market Price: --</p>
+    <p id="shortSMA">Short SMA: --</p>
+    <p id="longSMA">Long SMA: --</p>
+    <p id="shortEMA">Short EMA: --</p> <!-- New element for short EMA -->
+    <p id="longEMA">Long EMA: --</p>  <!-- New element for long EMA -->
+    <p id="tradingDecision">Trading Decision: --</p>
+</div>
+<script>
+    function fetchMarketData() {
+        // Assuming `window.api.getMarketData()` is set up to fetch all relevant data
+        window.api.getMarketData().then(data => {
+            document.getElementById('marketPrice').textContent = 'Current Market Price: ' + data.price.toFixed(2) + ' USD';
+            document.getElementById('shortSMA').textContent = 'Short SMA: ' + data.shortSMA.toFixed(2);
+            document.getElementById('longSMA').textContent = 'Long SMA: ' + data.longSMA.toFixed(2);
+            document.getElementById('shortEMA').textContent = 'Short EMA: ' + data.shortEMA.toFixed(2); // Update short EMA
+            document.getElementById('longEMA').textContent = 'Long EMA: ' + data.longEMA.toFixed(2); // Update long EMA
+            document.getElementById('tradingDecision').textContent = 'Trading Decision: ' + data.decision;
+        }).catch(err => {
+            console.error('Error fetching market data:', err);
+            // Optionally, you can update the UI to reflect that an error occurred
+            document.getElementById('marketPrice').textContent = 'Current Market Price: Error';
+            document.getElementById('shortSMA').textContent = 'Short SMA: Error';
+            document.getElementById('longSMA').textContent = 'Long SMA: Error';
+            document.getElementById('shortEMA').textContent = 'Short EMA: Error';
+            document.getElementById('longEMA').textContent = 'Long EMA: Error';
+            document.getElementById('tradingDecision').textContent = 'Trading Decision: Error';
+        });
+    }
+</script>
+
 
 <div class="section" id="botManagement">
     <h2>Trading Bot Management</h2>

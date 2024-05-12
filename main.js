@@ -5,9 +5,13 @@ const { Connection, PublicKey, Keypair } = require('@solana/web3.js');
 const { performBacktest, startLiveTest } = require('./tradeLogic');
 const downloadCSV = require('./dataDownloader');
 const { simulateTradingFrom } = require('./simulateTrades');
+const axios = require('axios');
+const { parse } = require('csv-parse/sync'); // This imports the parse function correctly
+const moment = require('moment');
 
 const CONFIG_PATH = path.join(__dirname, 'config.json');
-const botsFilePath = path.join(__dirname, 'bots.json');  // Path for bot configurations
+const botsFilePath = path.join(__dirname, 'bots.json');
+const JUPITER_PRICE_API_URL = 'https://price.jup.ag/v4/price?ids=SOL';
 
 function loadConfig() {
     if (fs.existsSync(CONFIG_PATH)) {
@@ -45,6 +49,107 @@ function createWindow() {
 }
 
 app.whenReady().then(createWindow);
+
+async function getMarketPrice() {
+    try {
+        const response = await axios.get(JUPITER_PRICE_API_URL);
+        return parseFloat(response.data.data.SOL.price);
+    } catch (error) {
+        console.error('Error fetching market price:', error);
+        return null;
+    }
+}
+
+
+function readHistoricalData() {
+    const directoryPath = path.join(__dirname, 'sol_historical_data');
+    let files;
+
+    try {
+        files = fs.readdirSync(directoryPath);
+    } catch (err) {
+        console.error('Failed to read directory:', directoryPath, err);
+        return [];
+    }
+
+    // Find the closest date file
+    let closestFile = null;
+    let closestDateDifference = Infinity;
+    const today = moment();
+    files.forEach(file => {
+        if (file.startsWith('SOL-USD') && file.endsWith('.csv')) {
+            const datePart = file.slice(8, 18); // Extract 'YYYY-MM-DD' from filenames
+            const fileDate = moment(datePart, 'YYYY-MM-DD');
+            const diff = Math.abs(today.diff(fileDate, 'days'));
+            if (diff < closestDateDifference) {
+                closestDateDifference = diff;
+                closestFile = file;
+            }
+        }
+    });
+
+    if (!closestFile) {
+        console.error('No CSV file found that matches criteria.');
+        return [];
+    }
+
+    const filePath = path.join(directoryPath, closestFile);
+    try {
+        const fileContent = fs.readFileSync(filePath, 'utf8');
+        const records = parse(fileContent, {
+            columns: true,
+            skip_empty_lines: true
+        });
+        return records.map(record => ({
+            close: parseFloat(record.Close) // Ensure this column name matches your CSV headers
+        }));
+    } catch (error) {
+        console.error('Failed to read or parse the file:', filePath, error);
+        return [];
+    }
+}
+
+function calculateSMA(data, period = 14) {
+    let sum = 0;
+    if (data.length < period) return null;
+    for (let i = data.length - period; i < data.length; i++) {
+        sum += data[i].close;  // Ensure data structure is correctly used
+    }
+    return sum / period;
+}
+
+function calculateEMA(data, period = 14, smoothing = 2) {
+    if (data.length < period) {
+        console.error("Not enough data points to calculate the initial SMA needed for EMA");
+        return [];
+    }
+
+    let emaArray = [];
+    let sum = 0;
+    for (let i = 0; i < period; i++) {
+        sum += data[i].close;
+    }
+    let previousEMA = sum / period; // This is your initial EMA, which is effectively an SMA
+    emaArray.push(previousEMA);
+
+    const multiplier = smoothing / (period + 1);
+    for (let i = period; i < data.length; i++) {
+        let currentEMA = (data[i].close - previousEMA) * multiplier + previousEMA;
+        emaArray.push(currentEMA);
+        previousEMA = currentEMA;
+    }
+
+    return emaArray;
+}
+
+function determineTradeAction(currentPrice, shortSMA, longSMA) {
+    if (shortSMA > longSMA && currentPrice > shortSMA) {
+        return 'BUY';  // Indicates a buy signal
+    } else if (shortSMA < longSMA && currentPrice < shortSMA) {
+        return 'SELL'; // Indicates a sell signal
+    }
+    return 'HOLD';  // No strong signal, hold the position
+}
 
 // Ensure bots.json exists
 function initializeBotsFile() {
@@ -164,6 +269,39 @@ ipcMain.handle('delete-bot', async (event, botId) => {
     writeBotsConfig(bots);
     return { status: 'success', message: 'Bot deleted successfully' };
 });
+
+ipcMain.handle('getMarketData', async (event) => {
+    try {
+        const currentPrice = await getMarketPrice();
+        const historicalData = readHistoricalData();
+        
+        const shortSMA = calculateSMA(historicalData, 14);
+        const longSMA = calculateSMA(historicalData, 28);
+        const shortEMA = calculateEMA(historicalData, 14);
+        const longEMA = calculateEMA(historicalData, 28);
+
+        // Ensure you have EMA values before attempting to access the last element
+        const lastShortEMA = shortEMA.length > 0 ? shortEMA[shortEMA.length - 1] : undefined;
+        const lastLongEMA = longEMA.length > 0 ? longEMA[longEMA.length - 1] : undefined;
+
+        const decision = determineTradeAction(currentPrice, lastShortEMA, lastLongEMA);
+
+        console.log({ currentPrice, shortSMA, longSMA, lastShortEMA, lastLongEMA, decision });
+
+        return {
+            price: currentPrice,
+            shortSMA,
+            longSMA,
+            shortEMA: lastShortEMA,
+            longEMA: lastLongEMA,
+            decision
+        };
+    } catch (error) {
+        console.error('Failed to fetch market data:', error);
+        throw error;
+    }
+});
+
 
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
